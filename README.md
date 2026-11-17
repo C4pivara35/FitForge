@@ -1,15 +1,19 @@
 # FitForge — Microfrontend
 
-SPA em React e Webpack Module Federation. O shell carrega dois microfrontends em tempo de execução: **Treinos** e **Progresso**.
+SPA React com Webpack Module Federation. O shell compõe os microfrontends Treinos e Progresso. A versão publicada consome o Gateway/BFF; não acessa diretamente os microsserviços.
 
-- O painel consome `GET /api/bff/dashboard`.
-- O CRUD envia as operações ao Gateway. A tela confirma gravações após a resposta da API.
-- Em nuvem, o shell pede a credencial de demonstração do Gateway, mantida em memória da aba.
-- Sem `FITFORGE_API_URL`, a execução local funciona como demonstração e usa o armazenamento do navegador. O workflow de publicação exige uma URL HTTPS.
+**Integrantes:** Andryus Zolet, Nicolas Medeiros, Valentin Rojas e Leonardo Henrique.
 
-## Rodar
+## Acesso e repositórios
 
-Com Node.js 22 ou mais recente:
+- [Frontend Azure](https://c4pivara35.z21.web.core.windows.net/).
+- [Gateway/BFF](https://fitforge-gateway-hvaqcubhf8d0a2hc.chilecentral-01.azurewebsites.net).
+- [Repositório Gateway](https://github.com/C4pivara35/FitForge-API_Gateway).
+- [Repositório backend](https://github.com/C4pivara35/FitForge-Microservicos).
+
+## Execução local
+
+Node.js 22+ e npm. Com Gateway em 8080 e serviços em 8081/8082, execute na raiz deste repositório:
 
 ```powershell
 npm ci
@@ -18,10 +22,34 @@ $env:FITFORGE_REQUIRE_AUTH = "true"
 npm run dev
 ```
 
-Acesse `http://localhost:5000` com o Gateway iniciado. Use a mesma configuração de autenticação no Gateway e no frontend. Em um terminal sem essas duas variáveis, rode `npm run check` para testes unitários, regras de arquitetura e integração do build federado.
+Acesse `http://localhost:5000`. Use as credenciais definidas no seu Gateway. Elas não são credenciais SQL ou da Azure. Sem API_URL, o modo de demonstração local usa armazenamento do navegador e não comprova a entrega em nuvem.
 
-## Azure
+## Testes e build
 
-Em GitHub Actions, defina a variável pública `FITFORGE_API_URL` com o Gateway HTTPS e o segredo `AZURE_STORAGE_CONNECTION_STRING`. Configure `CORS_ORIGINS` com a origem exata do site estático no Gateway.
+Em um terminal sem as variáveis de build acima:
 
-Integrantes em [GRUPO.md](GRUPO.md).
+```powershell
+npm ci
+npm run check
+```
+
+Esse comando executa testes unitários/regras de arquitetura, build e três testes de federação. O teste de arquitetura confirma composição dos remotes, consumo do BFF e limites entre adaptadores.
+
+## Configuração Azure
+
+No GitHub: variável pública `FITFORGE_API_URL` com a URL HTTPS do Gateway e segredo `AZURE_STORAGE_CONNECTION_STRING` do Storage. No Gateway: `CORS_ORIGINS=https://c4pivara35.z21.web.core.windows.net`.
+
+O workflow testa, compila com autenticação exigida e publica `dist` no contêiner `$web`. O Storage hospeda os arquivos estáticos; as operações de servidor passam pelo Gateway. Alterações apenas em README, GRUPO ou `docs/` não disparam deploy pelo workflow atualizado.
+
+A Visão geral chama `/api/bff/dashboard`. CRUD usa `/api/treinos` e `/api/sessoes` no Gateway e só confirma gravação após resposta bem-sucedida da API.
+
+## Documentação e entrega
+
+- [Arc42 completa: 12 seções](docs/ARC42.md).
+- [Checklist de validação e evidências](docs/VALIDACAO-ENTREGA.md).
+- [Guia detalhado de Azure SQL, Service Bus e publicação](https://github.com/C4pivara35/FitForge-Microservicos/blob/main/docs/DEPLOY-AZURE.md).
+- [Integrantes](GRUPO.md).
+
+A arquitetura adotada é **Vertical Slice Architecture**, com separação interna de responsabilidades e dependências verificadas por testes. A Arc42 detalha a aplicação de SOLID e os limites do desenho. A conclusão de SQL/mensageria depende da configuração e das evidências na Azure; código e CI aprovados não comprovam essa ativação.
+
+**Vídeo:** pendente de gravação/publicação não listada no YouTube. Inserir aqui o link após validar o fluxo em nuvem, com todos os integrantes falando e com câmera aberta.

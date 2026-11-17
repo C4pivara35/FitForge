@@ -7,5 +7,5 @@
 
 ## Trabalho
 
-FitForge — aplicativo de treino de academia com React e Module Federation.
-Atividade Formativa 13 — Arquitetura de Soluções Computacionais.
+FitForge — Projeto Arquitetura Completa — Cloud.
+Microfrontend, Gateway/BFF, microsserviços, bancos independentes e Azure Service Bus.

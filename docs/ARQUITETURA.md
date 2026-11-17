@@ -1,5 +1,7 @@
 # Arquitetura do FitForge
 
+A documentação arquitetural completa está em [ARC42.md](ARC42.md). Este arquivo mantém uma visão resumida do código; a validação da configuração na nuvem deve seguir [VALIDACAO-ENTREGA.md](VALIDACAO-ENTREGA.md).
+
 ## Fatias verticais
 
 - **Frontend:** `apps/workouts` e `apps/progress` são compilados separadamente e expostos por Module Federation. Cada fatia contém a interface e o adaptador de dados do domínio. O shell controla navegação, login e dashboard. O pacote compartilhado contém componentes, validação e o cliente do Gateway.
