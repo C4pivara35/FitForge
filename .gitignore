@@ -1,0 +1,17 @@
+node_modules/
+dist/
+apps/*/dist/
+.DS_Store
+._*
+__MACOSX/
+.env
+.env.*
+*.log
+.DS_Store
+
+# Configuração privada
+.env
+.env.*
+!.env.example
+*.PublishSettings
+*.publishsettings

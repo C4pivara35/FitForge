@@ -1,0 +1,55 @@
+# Publica o FitForge como site estático numa Conta de Armazenamento do Azure (contêiner $web).
+# Configuração no GitHub (Settings -> Secrets and variables -> Actions):
+#   Secrets   -> AZURE_STORAGE_CONNECTION_STRING: cadeia de conexão da conta de armazenamento
+#                (Conta de armazenamento -> Segurança + rede -> Chaves de acesso -> Cadeia de conexão)
+#   Variables -> FITFORGE_API_URL: URL do FitForge-API_Gateway (ex.: https://xxx.azurewebsites.net)
+#   O deploy exige um Gateway HTTPS e ativa o login no frontend.
+name: Deploy FitForge (Azure Storage)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes, build e integração da federação
+        run: npm run check
+
+      - name: Build para Azure com Gateway HTTPS
+        env:
+          FITFORGE_API_URL: ${{ vars.FITFORGE_API_URL }}
+          FITFORGE_REQUIRE_AUTH: 'true'
+        run: |
+          if [[ "$FITFORGE_API_URL" != https://* ]]; then
+            echo "::error::Defina FITFORGE_API_URL com a URL HTTPS do Gateway."
+            exit 1
+          fi
+          npm run build
+
+      - name: Enviar dist/ para o contêiner $web
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+        run: |
+          # Carrega os chunks antigos e novos antes de publicar os pontos de entrada.
+          az storage blob upload-batch --destination '$web' --source dist --overwrite \
+            --pattern '*.[0-9a-f]*.js' --content-cache-control 'public, max-age=31536000, immutable' --only-show-errors
+          az storage blob upload-batch --destination '$web' --source dist --overwrite \
+            --pattern '*.LICENSE.txt' --content-cache-control 'public, max-age=31536000, immutable' --only-show-errors
+          for entry in mfe-workouts/index.html mfe-progress/index.html mfe-workouts/remoteEntry.js mfe-progress/remoteEntry.js index.html; do
+            az storage blob upload --container-name '$web' --file "dist/$entry" --name "$entry" \
+              --overwrite --content-cache-control 'no-cache' --only-show-errors
+          done
