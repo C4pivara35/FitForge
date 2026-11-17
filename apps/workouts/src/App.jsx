@@ -10,9 +10,24 @@ const blankWorkout = () => ({ id: uuid(), name: '', description: '', days: ['Seg
 function WorkoutForm({ initial, onClose, onSave }) {
   const [form, setForm] = useState(() => structuredClone(initial));
   const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
   const change = (field, value) => setForm(f => ({ ...f, [field]: value }));
   const changeExercise = (id, field, value) => setForm(f => ({ ...f, exercises: f.exercises.map(e => e.id === id ? { ...e, [field]: value } : e) }));
-  const submit = async e => { e.preventDefault(); setError(''); try { if (!form.days.length) throw new Error('Selecione pelo menos um dia da semana.'); await onSave({ ...form, name: form.name.trim(), description: form.description.trim(), exercises: form.exercises.map(e => ({ ...e, name: e.name.trim() })) }); } catch (err) { setError(err.message); } };
+  const submit = async event => {
+    event.preventDefault();
+    if (pending) return;
+    setError('');
+    setPending(true);
+    try {
+      if (!form.days.length) throw new Error('Selecione pelo menos um dia da semana.');
+      await onSave({ ...form, name: form.name.trim(), description: form.description.trim(),
+        exercises: form.exercises.map(exercise => ({ ...exercise, name: exercise.name.trim() })) });
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setPending(false);
+    }
+  };
   return <Modal title={initial.name ? 'Editar ficha de treino' : 'Nova ficha de treino'} wide onClose={onClose}><form onSubmit={submit}>
     <Notice error>{error}</Notice>
     <div className="form-grid"><Field label="Nome da ficha"><input autoFocus required minLength={2} maxLength={80} placeholder="Ex.: Treino A · Superior" value={form.name} onChange={e => change('name', e.target.value)}/></Field><Field label="Descrição (opcional)"><input maxLength={250} placeholder="Objetivo ou observação" value={form.description} onChange={e => change('description', e.target.value)}/></Field></div>
@@ -23,7 +38,7 @@ function WorkoutForm({ initial, onClose, onSave }) {
       <div className="form-grid four">{[['sets', 'Séries', 1, 20, 1], ['reps', 'Repetições', 1, 100, 1], ['load', 'Carga (kg)', 0, 500, 0.5], ['rest', 'Descanso (s)', 0, 600, 1]].map(([field, label, min, max, step]) => <Field key={field} label={label}><input type="number" required min={min} max={max} step={step} value={exercise[field]} onChange={e => changeExercise(exercise.id, field, e.target.value === '' ? '' : Number(e.target.value))}/></Field>)}</div>
     </div>)}</div>
     <Button type="button" variant="secondary" disabled={form.exercises.length >= 30} onClick={() => change('exercises', [...form.exercises, blankExercise()])}><Plus size={16}/>Adicionar exercício</Button>
-    <div className="form-actions"><Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit">Salvar ficha</Button></div>
+    <div className="form-actions"><Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={pending}>{pending ? 'Salvando…' : 'Salvar ficha'}</Button></div>
   </form></Modal>;
 }
 function WorkoutCard({ workout, onEdit, onDelete, onCopy, onStart }) {

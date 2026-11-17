@@ -14,17 +14,49 @@ export default function App() {
 }
 
 function GatewayLogin({ onLogin }) {
+  const [registering, setRegistering] = useState(false);
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [pending, setPending] = useState(false);
-  async function signIn(event) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    setPending(true);
+
+  function changeMode(register) {
+    setRegistering(register);
     setError('');
-    setGatewayCredentials(data.get('username'), data.get('password'));
+    setNotice('');
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const login = username.trim();
+    const password = data.get('password');
+    setError('');
+    setNotice('');
+
+    if (registering && password !== data.get('passwordConfirmation')) {
+      setError('As senhas precisam ser iguais.');
+      return;
+    }
+    if (registering && new TextEncoder().encode(password).length > 72) {
+      setError('A senha ultrapassa o limite de 72 bytes.');
+      return;
+    }
+
+    setPending(true);
     try {
-      await gatewayRequest('/api/auth/check');
-      onLogin();
+      if (registering) {
+        await gatewayRequest('/api/auth/register', { method: 'POST', body: { username: login, password } });
+        form.reset();
+        setUsername(login);
+        changeMode(false);
+        setNotice('Conta criada. Entre com seu usuário e senha.');
+      } else {
+        setGatewayCredentials(login, password);
+        await gatewayRequest('/api/auth/check');
+        onLogin();
+      }
     } catch (error) {
       clearGatewayCredentials();
       setError(error.message);
@@ -35,12 +67,23 @@ function GatewayLogin({ onLogin }) {
 
   return <main className="main-content login-screen">
     <section className="panel login-panel">
-      <h1>Entrar no FitForge</h1>
-      <form onSubmit={signIn}>
+      <h1>{registering ? 'Criar conta no FitForge' : 'Entrar no FitForge'}</h1>
+      <form key={registering ? 'register' : 'login'} onSubmit={submit}>
         <Notice error>{error}</Notice>
-        <label>Usuário<input name="username" autoComplete="username" required maxLength={100}/></label>
-        <label>Senha<input name="password" type="password" autoComplete="current-password" required maxLength={72}/></label>
-        <Button type="submit" disabled={pending}>{pending ? 'Conectando…' : 'Entrar'}</Button>
+        <Notice>{notice}</Notice>
+        <label>Usuário<input name="username" autoComplete="username" required
+          minLength={registering ? 3 : undefined} maxLength={registering ? 64 : 100}
+          value={username} onChange={event => setUsername(event.target.value)}/></label>
+        <label>Senha<input name="password" type="password" required maxLength={72}
+          minLength={registering ? 8 : undefined}
+          autoComplete={registering ? 'new-password' : 'current-password'}/></label>
+        {registering && <label>Confirmar senha
+          <input name="passwordConfirmation" type="password" autoComplete="new-password" required maxLength={72}/>
+        </label>}
+        <Button type="submit" disabled={pending}>{pending ? 'Aguarde…' : registering ? 'Cadastrar' : 'Entrar'}</Button>
+        <button type="button" className="text-link" disabled={pending} onClick={() => changeMode(!registering)}>
+          {registering ? 'Voltar para o login' : 'Criar conta'}
+        </button>
       </form>
     </section>
   </main>;
