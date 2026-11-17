@@ -6,15 +6,29 @@ import { repository, event, key } from './api';
 const blank = id => ({ id: uuid(), workoutId: id || '', workoutName: '', date: localDate(), duration: 45, effort: 7, bodyWeight: null, notes: '' });
 function SessionForm({ initial, workouts, onClose, onSave }) {
   const [form, setForm] = useState(() => structuredClone(initial)); const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
   const change = (field, value) => setForm(f => ({ ...f, [field]: value }));
   const options = [...workouts]; if (initial.workoutId && !options.some(w => w.id === initial.workoutId)) options.push({ id: initial.workoutId, name: `${initial.workoutName} (ficha removida)` });
-  const submit = async e => { e.preventDefault(); try { const selected = workouts.find(w => w.id === form.workoutId); await onSave({ ...form, workoutName: selected?.name || initial.workoutName, notes: form.notes.trim() }); } catch (err) { setError(err.message); } };
+  const submit = async event => {
+    event.preventDefault();
+    if (pending) return;
+    setError('');
+    setPending(true);
+    try {
+      const selected = workouts.find(workout => workout.id === form.workoutId);
+      await onSave({ ...form, workoutName: selected?.name || initial.workoutName, notes: form.notes.trim() });
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setPending(false);
+    }
+  };
   return <Modal title={initial.workoutName ? 'Editar sessão' : 'Registrar sessão'} onClose={onClose}><form onSubmit={submit}><Notice error>{error}</Notice>
     <Field label="Ficha realizada"><select autoFocus required value={form.workoutId} onChange={e => change('workoutId', e.target.value)}><option value="">Selecione seu treino</option>{options.map(w => <option value={w.id} key={w.id}>{w.name}</option>)}</select></Field>
     <div className="form-grid"><Field label="Data do treino"><input type="date" required max={localDate()} min="1900-01-01" value={form.date} onChange={e => change('date', e.target.value)}/></Field><Field label="Duração (minutos)"><input type="number" required min={1} max={360} step={1} value={form.duration} onChange={e => change('duration', e.target.value === '' ? '' : Number(e.target.value))}/></Field></div>
     <div className="form-grid"><Field label="Esforço percebido (1 a 10)"><input type="number" required min={1} max={10} step={1} value={form.effort} onChange={e => change('effort', e.target.value === '' ? '' : Number(e.target.value))}/></Field><Field label="Peso corporal (kg, opcional)"><input type="number" min={20} max={400} step={0.1} placeholder="Ex.: 76,5" value={form.bodyWeight ?? ''} onChange={e => change('bodyWeight', e.target.value === '' ? null : Number(e.target.value))}/></Field></div>
     <Field label="Como foi seu treino? (opcional)"><textarea rows={3} maxLength={500} placeholder="Observações sobre a sessão..." value={form.notes} onChange={e => change('notes', e.target.value)}/></Field><p className="muted small">Registre uma sessão que você já realizou. O peso corporal é opcional.</p>
-    <div className="form-actions"><Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit">Salvar sessão</Button></div>
+    <div className="form-actions"><Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={pending}>{pending ? 'Salvando…' : 'Salvar sessão'}</Button></div>
   </form></Modal>;
 }
 function exportCSV(rows) {

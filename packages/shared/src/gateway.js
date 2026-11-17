@@ -31,7 +31,13 @@ export async function gatewayRequest(path, { method = 'GET', body, signal } = {}
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));
     const advice = response.status === 401 ? 'Confira o usuário e a senha do FitForge.' : `A API respondeu HTTP ${response.status}.`;
-    throw Object.assign(new Error(details.message || advice), { status: response.status });
+    const invalidField = Object.values(details.fieldErrors || {})[0];
+    const serviceUnavailable = response.status >= 500
+      ? 'Serviço indisponível no momento. Tente novamente em instantes.'
+      : advice;
+    throw Object.assign(new Error(invalidField || details.message || serviceUnavailable), { status: response.status });
   }
-  return response.status === 204 ? null : response.json();
+  if (response.status === 204) return null;
+  const content = await response.text();
+  return content ? JSON.parse(content) : null;
 }
