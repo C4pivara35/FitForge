@@ -24,6 +24,7 @@ Aplicação web de academia construída como **SPA React com Webpack Module Fede
 
 | Recurso | Endereço |
 | --- | --- |
+| video | https://youtu.be/Yu2t_vZOnPY |
 | Frontend (Azure) | https://c4pivara35.z21.web.core.windows.net/ |
 | Gateway/BFF | https://fitforge-gateway-hvaqcubhf8d0a2hc.chilecentral-01.azurewebsites.net |
 | Repositório do Gateway | https://github.com/C4pivara35/FitForge-API_Gateway |
